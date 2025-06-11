@@ -1,0 +1,26 @@
+{
+  "tests": [
+    {
+      "test_case_id": "test5010",
+      "test_case_description": "test",
+      "action": "CREATE",
+      "inputs": [
+        {
+          "feature_sr_no": 1,
+          "domain": "gas",
+          "feature": "derived_field",
+          "dependent_test_case": "",
+          "dependent_feature_sr_no": 0,
+          "attributes": {},
+          "validation": [
+            {
+              "database": "",
+              "sql_query": "",
+              "expected_result": {}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

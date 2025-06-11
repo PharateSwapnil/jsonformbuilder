@@ -1,0 +1,135 @@
+💡 Prompt to Build the App
+💬 "Build a full-stack dynamic JSON form builder web app using only React. The app should allow users to build a complex JSON object like the one in the reference below. As a user fills out the form, a Real-time JSON preview should be shown on the side. Features of the app include:
+
+Serve the HTML/JS frontend.
+
+API endpoint /save to accept JSON data and save it as a .json file in test_config folder.
+constant file content dynamically to provide dropdown options.
+Auto-generate feature serial numbers (feature_sr_no) incrementally. start always from 1.
+
+🎨 Frontend (react)
+Form builder for creating:
+Dropdowns for domain, feature, action, database.
+Dynamic input fields for attributes and expected_result as key:value pairs & Ability to add multiple inputs.
+
+Use collapsible cards/sections for each inputs.
+Add a "real-time JSON viewer" (e.g., using JSON.stringify() with <pre>).
+
+Use JavaScript to:
+Dynamically update the feature_sr_no.
+Generate the JSON object structure live and Editable.
+open new tab for creating new test case, the tab size should be resizable.
+UI buttons - "upload_json", "state_json" , "validate_features", "new_form", "load_template", "format_json", "copy_json", "add_database", "test_execution_state".
+
+UI -
+Headline-
+title- Duke Energy Data Products Testing , auto pop up 1 min timer after hiting validate_features button, json creater, dashboard, light/dark theme toggle.
+
+"Design an industry-grade, animated, and modern UI/UX for a JSON Creator tool tailored for Duke Energy’s Data Products Testing. Focus on intuitive JSON building, rich feature set, sleek interactions, and enterprise-level user experience."
+
+✅ Bonus Features
+Export final JSON using "upload_json" button in test config folder.
+Validate JSON structure before submission.
+
+🛠 Sample File Structure
+
+project/
+│src/common/utils/execution_lambda.py ->(print("hello world"))
+         |____/validation/process_validation.py -> (print("hello world"))
+├── test_config                   # after creating json wants to dump/upload here. and after hiting "state_json" button execute_lambda.py wants to be executed (show msg sucuessfully executed or not).
+├── test_execution_state/
+│   └── create_validation         # after hiting "validate_features" start 1 min timer after that execute process_validation.py (show msg sucuessfully executed or not)
+|   └── update_validation
+|   └── delete_validation
+├── validation.csv
+
+
+button to preview "state_json" which wants to execute "execute_lambda.py" file and if script executed sucessfully then based on test_case_id and action, search state.json file in respected folder and open a pop-up to preview ".state.json".
+ex - i have [create_validation, update_validation, delete_validation] folders, if i upload json having test case id "CON0002719-38889" and action = Create then preview CON0002719-38889.state.json in create_validation, that means filename will start with test_case id and state file will dump based on its action. similar for update & delete as well.
+if file is not found or present in [create_validation, update_validation, delete_validation] folders the show msg "file is not found".
+
+after clicking "validate_features" button i want to see auto pop up 1 min timer and after that execute process_validation.py pop-up msg if script executed sucessfully or not.
+
+JSON Preview editor box wants to Resizable from right side horizontally and downside vertically,
+and Use CodeMirror or Monaco Editor. Highlight keys in blue, string values in green, numbers in orange, booleans/null in red, and brackets in gray. Show validation errors clearly when the JSON is invalid. Optionally, include a 'Format' button to beautify the JSON. Real-time JSON Preview wants to editable.
+Allow loading an existing JSON to repopulate the form (optional). 
+
+also create a dashboard based on validation.csv -
+in that there will be test_case_id, state, test_case_validation_status.
+based on this info need to see how many overall test_cases executed , how may are passed/failed, based on stage - create/update/delete
+i want charts, graphs, filters, one asthetic working dashboard based on validation.csv
+
+after clicking "new_form" i want complete new tab as it is you can say again open fresh application on new pop-up window, which is async with backend.
+
+also after adding database to save the credentials i want to update credentials in .env file and saves credentials by {connection_name}_host, {connection_name}_port, {connection_name}_database_name, etc. take required info to add database, use sqlalchemy.
+
+Include comments or hover tooltips for field guidance for created buttons.
+
+📄 Reference JSON to Build From
+
+{
+  "tests": [
+    {
+      "test_case_id": "CON0002719-38889",
+      "test_case_description": "gas.directional referencetext InsertDerivedField",
+      "action": "CREATE/UPDATE/DELETE",
+      "inputs": [ # Dropdown - Ability to add multiple input dict{} for each feature
+        {
+          "feature_sr_no": 1, #auto incremental for next loop, by default 1.
+          "domain": "land/gas/electric", ## create dropdown for this
+          "feature": "", ## based on land/gas/electric (create dummy features for each domain, ## create dropdown for this) 
+          "dependent_test_case":"", ## create suggestion box- there will one csv validation.csv from that test_case_no. columns appear as a suggestion
+          "dependent_feature_sr_no":0, ## by default 0         
+          "attributes": {
+                "assetgroup" : "", ## based on feature ,editable key:values,
+                "assettype" : "", ## based on feature ,editable key:values,
+                ## Ability to add multiple inputs
+            },
+          "validation": [ # Dropdown - Ability to add multiple validation dict{}
+            {
+                "database":"Test_&_Raw/GSDS", ##dropdown
+                ## additionally you can add feature (create Button) to add databases for that take required credentials and test those databases. mostly postgres, oracle, mysql. 
+                ## input -> user/password/host/port/dbname -> i am using sqlalchemy to create connection. you can also use it for testing connection.
+                "sql_query":"select de_state_name from gas.pipelinedevice",
+                "expected_result":{
+                    "assetgroup":"Unknown", #editable key:values
+                    "assettype":"Unknown",  #editable key:values
+                    # Ability to add multiple inputs
+                }
+            },
+            {
+              ## this is 2nd {} like we will have many so we need feature to add multi inputs for validation.
+              "database":"",
+              "sql_query":"",
+              "expected_result":{}
+            }
+	        ]    
+        },
+        {
+            ## one dictionary inside inputs represent one feature and its information. it is responsible to create feature.
+            ## this is 2nd {} like we will have many to add features
+            ## based on previous feature_sr_no the number will change as 2
+        },
+	    ]
+    }
+  ]
+}
+
+# use this json as a Template and need to be loaded after load_template button.
+
+🧠 Suggested Tech Stack
+Frontend:
+
+Plain JS or Vue.js or React.
+Bootstrap or Tailwind CSS for styling.
+dark/light them.
+
+Backend:
+Flask
+
+Serve static files + API routes
+
+# create a folder structure and required json/py files for testing.
+*** Create application in very minimal, Optimised, and efficient code, and make industrial level ui.
+*** create detailed installation.md file for installation process, create config.md file where i want detailed info/codes/scripts/workflows behind all buttons.
+*** create detailed readme.md file for overall appplication

@@ -1,0 +1,15 @@
+test_case_id,domain,stage,test_case_validation_status,executed_at,error_message
+CON0002719-38889,gas,create,passed,2025-01-15T10:30:00Z,
+CON0002720-38890,land,update,failed,2025-01-15T11:15:00Z,Database connection timeout
+CON0002721-38891,electric,delete,passed,2025-01-15T12:00:00Z,
+CON0002722-38892,gas,create,passed,2025-01-10T13:30:00Z,
+CON0002723-38893,gas,update,passed,2025-06-10T14:15:00Z,
+CON0002724-38894,land,create,failed,2025-06-10T15:00:00Z,Invalid SQL query syntax
+CON0002725-38895,land,delete,passed,2025-06-06T16:30:00Z
+CON0002719-38889,gas,create,passed,2025-01-06T10:30:00Z,
+CON0002720-38890,land,update,failed,2025-01-06T11:15:00Z,Database connection timeout
+CON0002721-38891,electric,delete,passed,2025-01-06T12:00:00Z,
+CON0002722-38892,gas,create,passed,2025-01-06T13:30:00Z,
+CON0002723-38893,gas,update,passed,2025-06-06T14:15:00Z,
+CON0002724-38894,land,create,failed,2025-06-06T15:00:00Z,Invalid SQL query syntax
+CON0002725-38895,land,delete,passed,2025-06-06T16:30:00Z
