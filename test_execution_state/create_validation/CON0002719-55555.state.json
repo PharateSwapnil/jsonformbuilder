@@ -1,0 +1,42 @@
+{
+  "tests": [
+    {
+      "test_case_id": "CON0002719-55555",
+      "test_case_description": "asdfghjkl",
+      "action": "CREATE",
+      "test_case_type": "gas",
+      "inputs": [
+        {
+          "feature_sr_no": 1,
+          "domain": "land",
+          "feature": "land_parcel",
+          "dependent_test_case": "CON0002719-38889",
+          "dependent_feature_sr_no": 0,
+          "attributes": {},
+          "validation": [
+            {
+              "database": "",
+              "sql_query": "",
+              "expected_result": {}
+            }
+          ]
+        },
+        {
+          "feature_sr_no": 2,
+          "domain": "gas",
+          "feature": "pipeline_device",
+          "dependent_test_case": "CON0002719-38889",
+          "dependent_feature_sr_no": 0,
+          "attributes": {},
+          "validation": [
+            {
+              "database": "",
+              "sql_query": "",
+              "expected_result": {}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

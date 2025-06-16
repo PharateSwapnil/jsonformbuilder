@@ -1,0 +1,5 @@
+{
+  "land": ["land_parcel", "property_boundary", "survey_point"],
+  "gas": ["pipeline_device", "directional_text", "derived_field"],
+  "electric": ["transmission_line", "distribution_transformer", "service_point"]
+}
