@@ -56,15 +56,32 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  // Use environment variable for port with fallback
+  // Development: 5000, Production: 3000 (or specified PORT)
+  const port = process.env.PORT
+    ? parseInt(process.env.PORT)
+    : process.env.NODE_ENV === "production"
+      ? 3000
+      : 5000;
+  
+  // Use 0.0.0.0 for external accessibility in Replit
+  const host = "0.0.0.0";
+  
+  // Handle port conflicts gracefully
+  server.listen(port, host, () => {
+    log(
+      `serving on port http://${host}:${port} (${process.env.NODE_ENV || "development"} mode)`,
+    );
+  }).on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      log(`Port ${port} is busy, trying port ${port + 1}...`);
+      server.listen(port + 1, host, () => {
+        log(
+          `serving on port http://${host}:${port + 1} (${process.env.NODE_ENV || "development"} mode)`,
+        );
+      });
+    } else {
+      throw err;
+    }
   });
 })();

@@ -2,435 +2,234 @@
 # Duke Energy Data Products Testing - Configuration Guide
 
 ## Table of Contents
-1. [Application Configuration](#application-configuration)
-2. [Component Architecture](#component-architecture)
-3. [Button Workflows](#button-workflows)
-4. [Database Management](#database-management)
-5. [File Operations](#file-operations)
-6. [Python Script Integration](#python-script-integration)
-7. [API Endpoints](#api-endpoints)
-8. [Frontend Configuration](#frontend-configuration)
-9. [Theme Customization](#theme-customization)
-10. [Performance Tuning](#performance-tuning)
+1. [Environment Configuration](#environment-configuration)
+2. [Port Management](#port-management)
+3. [Development vs Production](#development-vs-production)
+4. [Component Architecture](#component-architecture)
+5. [Button Workflows](#button-workflows)
+6. [Database Management](#database-management)
+7. [File Operations](#file-operations)
+8. [Python Script Integration](#python-script-integration)
+9. [API Endpoints](#api-endpoints)
+10. [Deployment Configuration](#deployment-configuration)
+11. [Troubleshooting](#troubleshooting)
+12. [Performance Tuning](#performance-tuning)
 
 ---
 
-## Application Configuration
+## Environment Configuration
 
-### Environment Setup
-The application uses environment variables for configuration. Key settings include:
+### Environment Variables
+The application supports the following environment variables:
 
 ```bash
-NODE_ENV=development
-PORT=5000
+# .env file (optional)
+NODE_ENV=development|production
+PORT=5000                    # Custom port (optional)
 ```
 
-### Project Structure
-```
-├── client/                 # React frontend application
-│   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── pages/          # Main application pages
-│   │   ├── hooks/          # Custom React hooks
-│   │   └── lib/            # Utility libraries
-├── server/                 # Express.js backend
-├── shared/                 # Shared TypeScript schemas
-├── src/common/utils/       # Python utilities
-├── test_config/            # Test configuration files
-└── test_execution_state/   # Generated test state files
+### Port Assignment Strategy
+```typescript
+// Automatic port assignment logic
+const port = process.env.PORT ? 
+  parseInt(process.env.PORT) : 
+  (process.env.NODE_ENV === 'production' ? 3000 : 5000);
 ```
 
-### Core Dependencies
-- **Frontend**: React 18, TypeScript, Vite, TailwindCSS, Radix UI
-- **Backend**: Express.js, TypeScript
-- **State Management**: TanStack Query for server state
-- **Validation**: Zod schemas for type safety
-- **Charts**: Recharts for data visualization
+### Host Configuration
+- **Development**: `0.0.0.0:5000` (external access enabled)
+- **Production**: `0.0.0.0:3000` (or custom PORT)
+- **Replit**: Automatically forwards to external ports 80/443
+
+---
+
+## Port Management
+
+### Port Usage Matrix
+
+| Mode | Internal Port | External Port (Replit) | Host | Features |
+|------|---------------|------------------------|------|----------|
+| Development | 5000 | 80/443 | 0.0.0.0 | HMR, Dev tools |
+| Production | 3000 | 80/443 | 0.0.0.0 | Static serving |
+| Custom | PORT env | 80/443 | 0.0.0.0 | User defined |
+
+### Port Conflict Resolution
+
+#### Common Scenarios
+1. **Development server already running**
+   ```bash
+   Error: EADDRINUSE: address already in use 127.0.0.1:5000
+   ```
+
+2. **Multiple instances attempting same port**
+   ```bash
+   Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+   ```
+
+#### Solutions
+
+##### Option 1: Stop Existing Processes
+```bash
+# Find processes using port 5000
+lsof -i :5000                    # Unix/Linux/macOS
+netstat -ano | findstr :5000     # Windows
+
+# Kill specific process
+kill -9 <PID>                    # Unix/Linux/macOS
+taskkill /PID <PID> /F           # Windows
+
+# Kill all node processes (nuclear option)
+killall node                     # Unix/Linux/macOS
+taskkill /IM node.exe /F         # Windows
+```
+
+##### Option 2: Use Different Port
+```bash
+# Set custom port via environment variable
+PORT=3001 npm start
+
+# Or create .env file
+echo "PORT=3001" > .env
+npm start
+```
+
+##### Option 3: Workflow Management
+Use Replit workflows to manage server lifecycle:
+- Stop "Development" workflow before starting "Production"
+- Use designated workflows for different environments
+
+### Replit-Specific Port Handling
+
+#### Automatic Port Forwarding
+Replit automatically forwards internal ports to external URLs:
+- Internal port 5000 → External port 80 (default)
+- Internal port 3000 → External port 3000
+- Other ports: 3001, 3002, 3003, 4200, 6000, 8000, 8080, 8081
+
+#### .replit Configuration
+```toml
+# Automatic port binding
+[[ports]]
+localPort = 5000
+externalPort = 80
+exposeLocalhost = false
+
+[[ports]]
+localPort = 3000
+externalPort = 3000
+exposeLocalhost = false
+```
+
+---
+
+## Development vs Production
+
+### Development Mode (`npm run dev`)
+
+#### Features
+- **Vite Development Server**: Hot module replacement (HMR)
+- **TypeScript Compilation**: Real-time type checking
+- **Auto-reload**: Browser refreshes on file changes
+- **Source Maps**: Debugging with original source code
+- **Development Middleware**: Enhanced error reporting
+
+#### Configuration
+```typescript
+// Development-specific setup
+if (app.get("env") === "development") {
+  await setupVite(app, server);
+  // Vite middleware handles:
+  // - HMR WebSocket connections
+  // - TypeScript compilation
+  // - Asset serving with cache busting
+}
+```
+
+#### File Serving
+- React components served from `client/src/`
+- Hot reloading for instant feedback
+- Development-optimized bundles
+
+### Production Mode (`npm run build && npm start`)
+
+#### Build Process
+```bash
+# 1. Vite builds frontend
+vite build
+# Output: dist/public/ (static assets)
+
+# 2. esbuild bundles server
+esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+# Output: dist/index.js (server bundle)
+```
+
+#### Features
+- **Static File Serving**: Pre-built assets from `dist/public/`
+- **Optimized Bundles**: Minified and compressed
+- **Production Headers**: Security and caching headers
+- **Error Boundaries**: Graceful error handling
+
+#### Configuration
+```typescript
+// Production-specific setup
+if (app.get("env") === "production") {
+  serveStatic(app);
+  // Serves from dist/public/
+  // Fallback to index.html for SPA routing
+}
+```
+
+### Mode Comparison
+
+| Aspect | Development | Production |
+|--------|-------------|------------|
+| **Startup Time** | ~3-5 seconds | ~1 second |
+| **Bundle Size** | Large (with dev tools) | Optimized |
+| **Source Maps** | Full source maps | Production maps |
+| **Error Handling** | Detailed stack traces | User-friendly errors |
+| **Caching** | Disabled | Aggressive caching |
+| **Hot Reload** | Enabled | Disabled |
 
 ---
 
 ## Component Architecture
 
-### Core Components Overview
-
-#### 1. Dashboard (`client/src/pages/dashboard.tsx`)
-- **Purpose**: Real-time monitoring and analytics for test execution
-- **Features**:
-  - Auto-refresh every 30 seconds
-  - Comprehensive filtering (domain, stage, status, date range)
-  - Interactive charts and statistics
-  - Paginated test execution history (10 items per page)
-- **Key Props**: None (self-contained)
-- **State Management**: Uses TanStack Query for data fetching
-
-#### 2. JSON Builder (`client/src/pages/json-builder.tsx`)
-- **Purpose**: Dynamic form builder for test case configuration
-- **Features**:
-  - Real-time JSON preview with syntax highlighting
-  - CodeMirror editor integration
-  - Template loading and saving
-  - Lambda execution and state JSON viewing
-- **Dependencies**: `use-json-form` hook, `form-builder` component
-
-#### 3. Form Builder (`client/src/components/form-builder.tsx`)
-- **Purpose**: Dynamic form generation based on schema
-- **Features**:
-  - Support for multiple test case types (land/gas/electric)
-  - Dependent test case selection with autocomplete
-  - Action-based form fields (CREATE/UPDATE/DELETE)
-- **Props**: Form data, handlers, validation errors
-
-#### 4. File Browser (`client/src/components/file-browser.tsx`)
-- **Purpose**: Browse and preview test execution state files
-- **Features**:
-  - Directory tree navigation
-  - File content preview
-  - Auto-refresh functionality
-- **File Types Supported**: `.json`, `.state.json`
-
-### Component Communication Pattern
-```
-Dashboard ←→ API ←→ Server ←→ Python Scripts
-     ↓
-JSON Builder ←→ Form Builder ←→ File Browser
-```
-
----
-
-## Button Workflows
-
-### Primary Actions
-
-#### 1. Generate JSON Button
-- **Location**: JSON Builder page
-- **Function**: Converts form data to JSON configuration
-- **Validation**: Zod schema validation before generation
-- **Output**: Formatted JSON in the editor panel
-
-#### 2. Save Configuration Button
-- **Location**: JSON Builder page
-- **Function**: Saves JSON configuration to `test_config/` directory
-- **API Endpoint**: `POST /api/save`
-- **Response**: Success confirmation with file path
-
-#### 3. Execute Lambda Button
-- **Location**: JSON Builder page
-- **Function**: Executes Python validation script with test configuration
-- **Process**: 
-  1. Saves current configuration
-  2. Calls `src/common/utils/execution_lambda.py`
-  3. Returns execution status
-- **API Endpoint**: `POST /api/execute-lambda`
-
-#### 4. State JSON Button
-- **Location**: JSON Builder page (appears after execution)
-- **Function**: Retrieves and displays execution state
-- **File Source**: `test_execution_state/{action}_validation/{testCaseId}.state.json`
-- **Display**: CodeMirror editor with JSON syntax highlighting
-
-#### 5. Validate Features Button
-- **Location**: JSON Builder page
-- **Function**: Triggers comprehensive validation process
-- **Duration**: 1-minute delay for processing
-- **Script**: `src/common/utils/validation/process_validation.py`
-
-### Secondary Actions
-
-#### 6. Refresh Button (Dashboard)
-- **Function**: Manual data refresh
-- **Auto-refresh**: Disabled during manual refresh
-- **Re-enables**: Auto-refresh after completion
-
-#### 7. Clear Filters Button (Dashboard)
-- **Function**: Resets all filter selections to default
-- **Affects**: Domain, stage, status, and date filters
-
-#### 8. Load Template Button
-- **Location**: JSON Builder page
-- **Function**: Loads existing test configuration
-- **Source**: Files from `test_config/` directory
-
----
-
-## Database Management
-
-### Data Storage Strategy
-The application uses a hybrid storage approach:
-
-#### 1. File-Based Storage
-- **Test Configurations**: Stored as JSON files in `test_config/`
-- **Execution States**: Generated in `test_execution_state/`
-- **Validation Results**: CSV format in `validation.csv`
-
-#### 2. In-Memory Processing
-- **Dashboard Analytics**: Real-time computation from CSV data
-- **Form State**: Managed via React hooks and local storage
-
-#### 3. Data Flow
+### Application Structure
 
 ```mermaid
 graph TD
-    A[User Access] --> B[Dashboard]
-    A --> C[JSON Builder]
-    A --> D[File Browser]
+    A[User Request] --> B[Express Server]
+    B --> C{Environment}
     
-    B --> E[Load validation.csv]
-    E --> F[Apply Filters]
-    F --> G[Display Analytics]
-    G --> H[Auto-refresh 2min]
-    H --> E
+    C -->|Development| D[Vite Middleware]
+    C -->|Production| E[Static File Server]
     
-    C --> I[Form Builder]
-    I --> J[Feature Selection]
-    J --> K[Validation Rules]
-    K --> L[Generate JSON]
-    L --> M[Save to test_config/]
-    M --> N[Execute Python Scripts]
-    N --> O[Generate State Files]
-    O --> P[Update validation.csv]
-    P --> B
+    D --> F[React Dev Server]
+    E --> G[Pre-built Assets]
     
-    D --> Q[Scan test_execution_state/]
-    Q --> R[Organize by Type]
-    R --> S[Search & Filter]
-    S --> T[Preview Content]
+    F --> H[Component Tree]
+    G --> H
     
-    N --> U[execution_lambda.py]
-    N --> V[process_validation.py]
-    U --> W[Create State JSON]
-    V --> X[Update CSV Data]
+    H --> I[Dashboard]
+    H --> J[JSON Builder]
+    H --> K[File Browser]
     
-    subgraph "File System"
-        Y[test_config/*.json]
-        Z[test_execution_state/]
-        AA[validation.csv]
-    end
-    
-    M --> Y
-    W --> Z
-    X --> AA
+    B --> L[API Routes]
+    L --> M[Python Scripts]
+    L --> N[File System]
+    L --> O[In-Memory Storage]
 ```
 
-### Data Flow Architecture
+### Component Communication
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         USER INTERFACE LAYER                       │
-├─────────────────┬─────────────────┬─────────────────────────────────┤
-│   Dashboard     │  JSON Builder   │      File Browser              │
-│   Analytics &   │  Form Creation  │      State File Management     │
-│   Monitoring    │  & Validation   │      Search & Preview          │
-└─────────────────┴─────────────────┴─────────────────────────────────┘
-         │                   │                         │
-         ▼                   ▼                         ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                         API GATEWAY LAYER                          │
-├─────────────────────────────────────────────────────────────────────┤
-│  • GET /api/validation-csv    • POST /api/save                     │
-│  • GET /api/dashboard-stats   • POST /api/execute-lambda           │
-│  • GET /api/execution-files   • POST /api/validate-features        │
-│  • GET /api/load-template     • GET /api/state-json/:id/:action    │
-└─────────────────────────────────────────────────────────────────────┘
-         │                   │                         │
-         ▼                   ▼                         ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      BUSINESS LOGIC LAYER                          │
-├─────────────────┬─────────────────┬─────────────────────────────────┤
-│   Data Fetch    │  File Operations│     Python Execution           │
-│   & Processing  │  & Validation   │     & State Management          │
-└─────────────────┴─────────────────┴─────────────────────────────────┘
-         │                   │                         │
-         ▼                   ▼                         ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      DATA PERSISTENCE LAYER                        │
-├─────────────────┬─────────────────┬─────────────────────────────────┤
-│ validation.csv  │  test_config/   │   test_execution_state/         │
-│ Historical Data │  JSON Configs   │   Runtime State Files           │
-│ Analytics Source│  User Created   │   Generated by Python           │
-└─────────────────┴─────────────────┴─────────────────────────────────┘
-```
-
-### Detailed Component Interaction
-
-```
-Form Input → JSON Config → File Storage → Python Processing → State Files → Dashboard Display
-```
-
-**Execution Flow:**
-1. **Form Input**: User creates test case configuration
-2. **JSON Config**: Data validated and formatted as JSON
-3. **File Storage**: Configuration saved to `test_config/`
-4. **Python Processing**: Scripts execute validation logic
-5. **State Files**: Results saved to `test_execution_state/`
-6. **Dashboard Display**: Analytics updated with new results
-
-### Data Persistence
-- **Configuration Files**: Persistent across sessions
-- **Execution States**: Generated per test run
-- **User Preferences**: Browser local storage
-- **Filter States**: Session-based (reset on refresh)
-
----
-
-## File Operations
-
-### Supported File Types
-
-#### 1. JSON Configuration Files (`.json`)
-- **Location**: `test_config/`
-- **Purpose**: Test case definitions
-- **Schema**: Validated against Zod schemas
-- **Operations**: Create, Read, Update via API
-
-#### 2. State Files (`.state.json`)
-- **Location**: `test_execution_state/{action}_validation/`
-- **Purpose**: Execution results and state tracking
-- **Generated By**: Python validation scripts
-- **Operations**: Read-only via API
-
-#### 3. CSV Data Files (`.csv`)
-- **Location**: Root directory (`validation.csv`)
-- **Purpose**: Historical validation results
-- **Format**: Structured columns for dashboard analytics
-- **Operations**: Read via API, written by Python scripts
-
-### File Management API
-
-#### Directory Structure Reading
+#### State Management Flow
 ```typescript
-GET /api/execution-files
-// Returns: Hierarchical file structure
-```
-
-#### File Content Retrieval
-```typescript
-GET /api/execution-files/content?path={filePath}
-// Returns: File content with metadata
-```
-
-#### Security Measures
-- Path validation to prevent directory traversal
-- Access limited to project directory
-- File type validation for previews
-
----
-
-## Python Script Integration
-
-### Core Scripts
-
-#### 1. Execution Lambda (`src/common/utils/execution_lambda.py`)
-- **Purpose**: Individual test case execution
-- **Input**: JSON configuration file
-- **Output**: State JSON file
-- **Integration**: Called via Node.js child process
-
-#### 2. Validation Processor (`src/common/utils/validation/process_validation.py`)
-- **Purpose**: Comprehensive test suite validation
-- **Features**:
-  - Bulk test processing
-  - Statistics generation
-  - CSV output for dashboard
-- **Execution Time**: ~1 minute for full validation
-
-### Python-Node.js Communication
-
-#### Execution Pattern
-```javascript
-const executeScript = (scriptPath, args = []) => {
-  return new Promise((resolve, reject) => {
-    const python = spawn('python3', [scriptPath, ...args]);
-    // Handle stdout, stderr, and exit codes
-  });
-};
-```
-
-#### Error Handling
-- **Script Errors**: Captured via stderr
-- **Exit Codes**: Non-zero codes trigger error responses
-- **Timeouts**: Configurable timeout for long-running processes
-
-#### Data Exchange
-- **Input**: JSON configuration files
-- **Output**: JSON state files and CSV reports
-- **Logging**: Structured console output for debugging
-
----
-
-## API Endpoints
-
-### Test Configuration Management
-
-#### Save Configuration
-```typescript
-POST /api/save
-Body: { filename: string, content: object }
-Response: { success: boolean, filename: string, path: string }
-```
-
-#### Load Templates
-```typescript
-GET /api/templates
-Response: { success: boolean, templates: string[] }
-```
-
-### Execution Control
-
-#### Execute Lambda
-```typescript
-POST /api/execute-lambda
-Body: { testCaseId: string, action: string }
-Response: { success: boolean, message: string }
-```
-
-#### Validate Features
-```typescript
-POST /api/validate-features
-Response: { success: boolean, message: string }
-```
-
-### Data Retrieval
-
-#### State JSON
-```typescript
-GET /api/state-json/:testCaseId/:action
-Response: { success: boolean, data: object, filename: string }
-```
-
-#### Validation CSV
-```typescript
-GET /api/validation-csv
-Response: ValidationRecord[]
-```
-
-### File Operations
-
-#### Execution Files Structure
-```typescript
-GET /api/execution-files
-Response: { success: boolean, files: FileNode[] }
-```
-
-#### File Content
-```typescript
-GET /api/execution-files/content?path={string}
-Response: { success: boolean, content: string }
-```
-
----
-
-## Frontend Configuration
-
-### State Management Architecture
-
-#### 1. TanStack Query Configuration
-```typescript
-// client/src/lib/queryClient.ts
+// Global state via TanStack Query
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30000,        // 30 seconds
-      refetchInterval: 30000,  // Auto-refresh
+      refetchInterval: 30000,  // Auto-refresh interval
       retry: 3,
       retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000)
     }
@@ -438,78 +237,738 @@ const queryClient = new QueryClient({
 });
 ```
 
-#### 2. Form State Management
-```typescript
-// client/src/hooks/use-json-form.ts
-const useJsonForm = () => {
-  const [testCases, setTestCases] = useState<TestCase[]>([]);
-  const [errors, setErrors] = useState<ValidationError[]>([]);
-  // Form handlers and validation logic
-};
+#### Component Hierarchy
 ```
-
-### Routing Configuration
-```typescript
-// Single Page Application with conditional rendering
-const App = () => {
-  const [currentPage, setCurrentPage] = useState<'builder' | 'dashboard'>('builder');
-  // Page routing logic
-};
-```
-
-### Theme System
-```typescript
-// client/src/components/theme-provider.tsx
-type Theme = "dark" | "light" | "system"
-// Theme context and switching logic
+App
+├── ThemeProvider
+├── QueryClientProvider
+├── Header (Navigation)
+├── Dashboard
+│   ├── StatsCards
+│   ├── Charts (Recharts)
+│   ├── FilterControls
+│   └── ValidationTable
+├── JSONBuilder
+│   ├── FormBuilder
+│   ├── JSONEditor (CodeMirror)
+│   └── ActionSidebar
+└── FileBrowser
+    ├── DirectoryTree
+    └── FilePreview
 ```
 
 ---
 
-## Theme Customization
+## Button Workflows
 
-### Color Palette System
+### Primary Action Buttons
 
-#### Primary Colors
-```css
-/* Tailwind CSS Custom Colors */
-:root {
-  --color-gas: #FF6B35;      /* Orange for Gas domain */
-  --color-electric: #4ECDC4;  /* Teal for Electric domain */
-  --color-land: #45B7D1;     /* Blue for Land domain */
-  --color-passed: #10B981;   /* Green for passed tests */
-  --color-failed: #EF4444;   /* Red for failed tests */
-}
-```
-
-#### Stage-based Colors
-```css
-:root {
-  --color-create: #10B981;   /* Green for CREATE operations */
-  --color-update: #F59E0B;   /* Yellow for UPDATE operations */
-  --color-delete: #EF4444;   /* Red for DELETE operations */
-}
-```
-
-### Component Theming
-
-#### Dashboard Cards
-- **Gradient Backgrounds**: Domain-specific color gradients
-- **Status Indicators**: Color-coded badges for test status
-- **Chart Colors**: Consistent with domain and status colors
-
-#### Form Elements
-- **Input Focus**: Blue accent colors
-- **Validation States**: Red for errors, green for success
-- **Button Variants**: Primary, secondary, destructive, outline
-
-### Dark Mode Support
+#### 1. Generate JSON Button
 ```typescript
-// Automatic dark mode detection and manual toggle
-const useTheme = () => {
-  const [theme, setTheme] = useState<Theme>("system");
-  // Theme detection and switching logic
+Location: JSON Builder → Form Section
+Function: Convert form data to JSON configuration
+Validation: Zod schema validation
+Output: Formatted JSON in editor panel
+```
+
+**Implementation**:
+```typescript
+const handleGenerateJson = () => {
+  try {
+    const validatedData = JsonTestStructure.parse(formData);
+    setJsonContent(JSON.stringify(validatedData, null, 2));
+  } catch (error) {
+    setErrors(error.errors);
+  }
 };
+```
+
+#### 2. Save Configuration Button
+```typescript
+Location: JSON Builder → Action Sidebar
+API: POST /api/save
+Process: Save JSON to test_config/ directory
+Response: Success confirmation with file path
+```
+
+#### 3. Execute Lambda Button
+```typescript
+Location: JSON Builder → Action Sidebar
+API: POST /api/execute-lambda
+Process: 
+  1. Save current configuration
+  2. Execute Python script
+  3. Generate state file
+Response: Execution status and output
+```
+
+#### 4. Validate Features Button
+```typescript
+Location: JSON Builder → Action Sidebar
+API: POST /api/validate-features
+Process: Bulk validation with 1-minute timer
+Script: src/common/utils/validation/process_validation.py
+```
+
+### Secondary Action Buttons
+
+#### 5. Load Template Button
+```typescript
+Location: JSON Builder → Header
+API: GET /api/load-template
+Function: Load predefined JSON structure
+Output: Populate form with template data
+```
+
+#### 6. State JSON Button
+```typescript
+Location: JSON Builder (conditional)
+API: GET /api/state-json/:testCaseId/:action
+Condition: Appears after lambda execution
+Function: Display execution state in editor
+```
+
+#### 7. Refresh Button (Dashboard)
+```typescript
+Location: Dashboard → Header
+Function: Manual data refresh
+Effect: Invalidate TanStack Query cache
+Auto-refresh: Temporarily disabled during manual refresh
+```
+
+---
+
+## Database Management
+
+### Storage Architecture
+
+#### File-Based Persistence
+```
+test_config/                 # User configurations
+├── CON0002719-55555.json   # Individual test cases
+├── test5010.json
+└── ...
+
+test_execution_state/        # Generated results
+├── create_validation/
+│   ├── CON0002719-55555.state.json
+│   └── test5010.state.json
+├── update_validation/
+└── delete_validation/
+
+validation.csv              # Historical data for dashboard
+```
+
+#### In-Memory Processing
+```typescript
+// MemStorage class handles runtime data
+class MemStorage {
+  private users: Map<number, User>
+  private testCases: Map<number, TestCase>
+  private databases: Map<number, Database>
+  private validationResults: Map<number, ValidationResult>
+}
+```
+
+### Data Flow Diagram
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant A as API
+    participant P as Python
+    participant FS as File System
+    participant D as Dashboard
+
+    U->>F: Create test case
+    F->>A: POST /api/save
+    A->>FS: Save JSON config
+    
+    U->>F: Execute Lambda
+    F->>A: POST /api/execute-lambda
+    A->>P: Run execution_lambda.py
+    P->>FS: Generate .state.json
+    
+    U->>F: Validate Features
+    F->>A: POST /api/validate-features
+    A->>P: Run process_validation.py
+    P->>FS: Update validation.csv
+    
+    D->>A: GET /api/validation-csv
+    A->>FS: Read validation.csv
+    A->>D: Return analytics data
+```
+
+### Database Connection Management
+
+#### Default Databases
+```typescript
+// Pre-configured database connections
+const defaultDatabases = [
+  {
+    connectionName: "Test_&_Raw/GSDS",
+    host: "localhost",
+    port: 5432,
+    databaseName: "gsds_test",
+    username: "admin",
+    password: "password",
+    databaseType: "postgres"
+  },
+  {
+    connectionName: "Production/GSDS",
+    host: "prod-server",
+    port: 5432,
+    databaseName: "gsds_prod",
+    username: "admin",
+    password: "password",
+    databaseType: "postgres"
+  }
+];
+```
+
+#### Environment Variable Generation
+When new databases are added, the system automatically generates `.env` entries:
+```bash
+# Auto-generated entries
+TEST_RAW_GSDS_HOST="localhost"
+TEST_RAW_GSDS_PORT=5432
+TEST_RAW_GSDS_DATABASE_NAME="gsds_test"
+# ... etc
+```
+
+---
+
+## File Operations
+
+### Supported File Types
+
+#### JSON Configuration Files
+```typescript
+// Schema validation for .json files
+interface TestConfiguration {
+  tests: Array<{
+    test_case_id: string;
+    test_case_description: string;
+    action: "CREATE" | "UPDATE" | "DELETE";
+    inputs: Array<{
+      feature_sr_no: number;
+      domain: "land" | "gas" | "electric" | "";
+      feature: string;
+      validation: Array<{
+        database: string;
+        sql_query: string;
+        expected_result: Record<string, string>;
+      }>;
+    }>;
+  }>;
+}
+```
+
+#### State Files
+```typescript
+// Generated by Python scripts
+interface StateFile {
+  test_case_id: string;
+  execution_timestamp: string;
+  status: "success" | "failed" | "pending";
+  results: Array<{
+    step: string;
+    status: string;
+    details: any;
+  }>;
+}
+```
+
+#### CSV Data Structure
+```csv
+test_case_id,domain,stage,test_case_validation_status,executed_at,error_message
+CON0002719-38889,gas,create,passed,2025-01-15T10:30:00Z,""
+CON0002720-38890,land,update,failed,2025-01-15T11:15:00Z,"Database connection timeout"
+```
+
+### File Security
+
+#### Path Validation
+```typescript
+// Prevent directory traversal attacks
+const isValidPath = (filePath: string) => {
+  const fullPath = path.join(process.cwd(), filePath);
+  return fullPath.startsWith(process.cwd());
+};
+```
+
+#### Access Control
+- Read-only access to execution state files
+- Write access limited to test_config/ directory
+- File type validation for uploads
+
+---
+
+## Python Script Integration
+
+### Script Architecture
+
+#### execution_lambda.py
+```python
+# Individual test case execution
+def execute_test_case(config_file):
+    """
+    Execute a single test case configuration
+    Generate state JSON file with results
+    """
+    pass
+```
+
+#### process_validation.py
+```python
+# Bulk validation processing
+def process_all_validations():
+    """
+    Process all test configurations
+    Generate comprehensive validation report
+    Update validation.csv with results
+    """
+    pass
+```
+
+### Node.js → Python Communication
+
+#### Script Execution Pattern
+```typescript
+async function executeScript(scriptPath: string, args: string[] = []): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const python = spawn('python3', [scriptPath, ...args]);
+    
+    let output = '';
+    let errorOutput = '';
+    
+    python.stdout.on('data', (data) => {
+      output += data.toString();
+    });
+    
+    python.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+    
+    python.on('close', (code) => {
+      if (code === 0) {
+        resolve(output);
+      } else {
+        reject(new Error(errorOutput || `Process exited with code ${code}`));
+      }
+    });
+    
+    // Timeout after 5 minutes
+    setTimeout(() => {
+      python.kill();
+      reject(new Error('Script execution timeout'));
+    }, 5 * 60 * 1000);
+  });
+}
+```
+
+#### Error Handling Strategy
+```typescript
+// Comprehensive error handling
+try {
+  const result = await executeScript(scriptPath);
+  res.json({ success: true, output: result });
+} catch (error) {
+  console.error('Script execution failed:', error);
+  res.status(500).json({ 
+    success: false, 
+    message: 'Script execution failed',
+    error: error.message 
+  });
+}
+```
+
+---
+
+## API Endpoints
+
+### Complete API Reference
+
+#### Configuration Management
+```typescript
+// Save test configuration
+POST /api/save
+Body: JsonTestStructure
+Response: { success: boolean, filename: string, path: string }
+
+// Load template
+GET /api/load-template
+Response: JsonTestStructure (default template)
+
+// Upload and validate JSON
+POST /api/upload-json
+Body: { jsonData: any }
+Response: { success: boolean, data?: JsonTestStructure }
+```
+
+#### Execution Control
+```typescript
+// Execute individual test
+POST /api/execute-lambda
+Response: { success: boolean, message: string, output?: string }
+
+// Bulk validation
+POST /api/validate-features
+Response: { success: boolean, message: string }
+
+// Get execution state
+GET /api/state-json/:testCaseId/:action
+Response: { success: boolean, data: any, filename: string }
+```
+
+#### Data Retrieval
+```typescript
+// Validation results for dashboard
+GET /api/validation-csv
+Response: ValidationRecord[]
+
+// Dashboard statistics
+GET /api/dashboard-stats
+Response: {
+  totalTests: number,
+  passedTests: number,
+  failedTests: number,
+  successRate: number,
+  byStage: { create: number, update: number, delete: number }
+}
+```
+
+#### File Operations
+```typescript
+// Browse execution files
+GET /api/execution-files
+Response: { success: boolean, files: FileNode[] }
+
+// Get file content
+GET /api/execution-files/content?path={string}
+Response: { success: boolean, content: string }
+```
+
+#### Database Management
+```typescript
+// Test database connection
+POST /api/databases/test-connection
+Body: DatabaseCredentials
+Response: { success: boolean, message: string }
+
+// Get all databases
+GET /api/databases
+Response: Database[]
+
+// Create database connection
+POST /api/databases
+Body: DatabaseConfig
+Response: Database
+```
+
+---
+
+## Deployment Configuration
+
+### Replit Deployment Strategy
+
+#### Workflow Configuration
+```yaml
+# Development Workflow
+commands:
+  - npm install
+  - npm run dev
+environment: development
+port: 5000
+
+# Production Workflow  
+commands:
+  - npm install
+  - npm run build
+  - npm start
+environment: production
+port: 3000
+```
+
+#### Environment Variables for Deployment
+```bash
+# Required for production
+NODE_ENV=production
+PORT=3000
+
+# Optional database configurations
+DATABASE_URL=postgresql://...
+REDIS_URL=redis://...
+```
+
+### Manual Deployment Steps
+
+#### 1. Pre-deployment Checklist
+```bash
+# Verify Node.js version
+node --version  # Should be 18+
+
+# Check Python availability
+python3 --version  # Should be 3.8+
+
+# Verify dependencies
+npm audit
+npm run build  # Test build process
+```
+
+#### 2. Production Build Process
+```bash
+# Clean previous builds
+rm -rf dist/
+
+# Install dependencies
+npm ci  # Use exact package-lock.json versions
+
+# Build frontend
+npm run build
+# Generates: dist/public/ (static assets)
+#           dist/index.js (server bundle)
+
+# Start production server
+npm start
+```
+
+#### 3. Health Check Verification
+```bash
+# Verify server is running
+curl http://0.0.0.0:3000/api/validation-csv
+
+# Check file operations
+curl http://0.0.0.0:3000/api/execution-files
+
+# Test Python integration
+curl -X POST http://0.0.0.0:3000/api/execute-lambda
+```
+
+### Production Monitoring
+
+#### Log Analysis
+```typescript
+// Structured logging for production
+export function log(message: string, source = "express") {
+  const timestamp = new Date().toISOString();
+  const logLevel = process.env.NODE_ENV === 'production' ? 'INFO' : 'DEBUG';
+  console.log(`[${timestamp}] [${logLevel}] [${source}] ${message}`);
+}
+```
+
+#### Performance Metrics
+```typescript
+// Request timing middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    if (duration > 1000) {  // Log slow requests
+      log(`SLOW REQUEST: ${req.method} ${req.path} took ${duration}ms`);
+    }
+  });
+  next();
+});
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+#### 1. Port Conflicts
+
+**Issue**: `EADDRINUSE: address already in use`
+
+**Diagnosis**:
+```bash
+# Check what's using the port
+lsof -i :5000                    # Unix/Linux/macOS
+netstat -ano | findstr :5000     # Windows
+
+# Check Node.js processes
+ps aux | grep node               # Unix/Linux/macOS
+tasklist | findstr node.exe      # Windows
+```
+
+**Solutions**:
+```bash
+# Option 1: Kill specific process
+kill -9 <PID>                    # Unix/Linux/macOS
+taskkill /PID <PID> /F           # Windows
+
+# Option 2: Kill all Node processes
+killall node                     # Unix/Linux/macOS
+taskkill /IM node.exe /F         # Windows
+
+# Option 3: Use different port
+PORT=3001 npm start
+
+# Option 4: Wait and retry (port might be in TIME_WAIT)
+sleep 30 && npm start
+```
+
+#### 2. Build Failures
+
+**Issue**: TypeScript compilation errors during build
+
+**Diagnosis**:
+```bash
+# Check TypeScript errors
+npx tsc --noEmit
+
+# Verify dependencies
+npm ls --depth=0
+```
+
+**Solutions**:
+```bash
+# Fix TypeScript errors
+npm run build 2>&1 | grep error
+
+# Reinstall dependencies
+rm -rf node_modules package-lock.json
+npm install
+
+# Clear TypeScript cache
+rm -rf .tsbuildinfo
+```
+
+#### 3. Python Script Failures
+
+**Issue**: Python scripts not executing
+
+**Diagnosis**:
+```bash
+# Check Python availability
+python3 --version
+which python3
+
+# Test script manually
+python3 src/common/utils/execution_lambda.py
+
+# Check file permissions
+ls -la src/common/utils/*.py
+```
+
+**Solutions**:
+```bash
+# Fix Python path
+export PATH="/usr/bin/python3:$PATH"
+
+# Make scripts executable
+chmod +x src/common/utils/*.py
+
+# Install required packages
+pip3 install -r requirements.txt  # if exists
+```
+
+#### 4. File Access Issues
+
+**Issue**: Cannot read/write configuration files
+
+**Diagnosis**:
+```bash
+# Check directory permissions
+ls -la test_config/
+ls -la test_execution_state/
+
+# Verify disk space
+df -h .
+```
+
+**Solutions**:
+```bash
+# Create missing directories
+mkdir -p test_config test_execution_state
+
+# Fix permissions
+chmod 755 test_config/
+chmod 755 test_execution_state/
+
+# Check available space
+du -sh .
+```
+
+#### 5. Frontend Loading Issues
+
+**Issue**: Blank page or JavaScript errors
+
+**Diagnosis**:
+```bash
+# Check browser console for errors
+# Check network tab for failed requests
+# Verify build output
+ls -la dist/public/
+```
+
+**Solutions**:
+```bash
+# Rebuild frontend
+rm -rf dist/
+npm run build
+
+# Check for missing assets
+cat dist/public/index.html
+
+# Clear browser cache
+# Hard refresh: Ctrl+Shift+R (or Cmd+Shift+R)
+```
+
+### Performance Issues
+
+#### 1. Slow API Responses
+
+**Diagnosis**:
+```typescript
+// Add request timing
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`${req.method} ${req.path}: ${duration}ms`);
+  });
+  next();
+});
+```
+
+**Solutions**:
+- Enable gzip compression
+- Add response caching
+- Optimize database queries
+- Use streaming for large files
+
+#### 2. Memory Leaks
+
+**Diagnosis**:
+```bash
+# Monitor memory usage
+node --inspect dist/index.js
+# Open chrome://inspect in browser
+```
+
+**Solutions**:
+- Clear TanStack Query cache periodically
+- Remove event listeners properly
+- Optimize Python script execution
+
+#### 3. High CPU Usage
+
+**Common Causes**:
+- Multiple Python script executions
+- Inefficient file watching
+- Too frequent auto-refresh
+
+**Solutions**:
+```typescript
+// Throttle auto-refresh
+const throttledRefresh = useMemo(
+  () => throttle(fetchData, 30000),  // Max once per 30 seconds
+  [fetchData]
+);
 ```
 
 ---
@@ -518,96 +977,119 @@ const useTheme = () => {
 
 ### Frontend Optimizations
 
-#### 1. React Query Optimizations
-- **Stale Time**: 30 seconds to reduce unnecessary requests
-- **Background Refetching**: Automatic data freshness
-- **Query Invalidation**: Strategic cache updates
-
-#### 2. Component Optimizations
+#### 1. React Query Configuration
 ```typescript
-// Memoization for expensive calculations
-const chartData = useMemo(() => {
-  return computeExpensiveChartData(rawData);
-}, [rawData]);
-
-// Callback memoization
-const handleFormChange = useCallback((field, value) => {
-  setFormData(prev => ({ ...prev, [field]: value }));
-}, []);
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,     // 5 minutes
+      cacheTime: 10 * 60 * 1000,    // 10 minutes
+      refetchOnWindowFocus: false,   // Disable refocus refetch
+      retry: 2,                      // Reduce retry attempts
+    }
+  }
+});
 ```
 
-#### 3. Pagination Performance
-- **Virtual Scrolling**: Not implemented (10 items per page sufficient)
-- **Lazy Loading**: Data fetched per page
-- **Filter Optimization**: Client-side filtering with memoization
+#### 2. Component Memoization
+```typescript
+// Expensive calculations
+const chartData = useMemo(() => {
+  return processValidationData(rawData);
+}, [rawData]);
+
+// Event handlers
+const handleFormChange = useCallback((field: string, value: any) => {
+  setFormData(prev => ({ ...prev, [field]: value }));
+}, []);
+
+// Component memoization
+const ExpensiveComponent = memo(({ data }: { data: any[] }) => {
+  // Component implementation
+});
+```
+
+#### 3. Bundle Optimization
+```typescript
+// vite.config.ts optimizations
+export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['@radix-ui/react-button', '@radix-ui/react-dialog'],
+          charts: ['recharts'],
+        }
+      }
+    },
+    chunkSizeWarningLimit: 600,
+  }
+});
+```
 
 ### Backend Optimizations
 
-#### 1. File Operations
-- **Caching**: Directory structure cached for 30 seconds
-- **Streaming**: Large files streamed rather than loaded entirely
-- **Path Validation**: Early validation to prevent unnecessary operations
-
-#### 2. Python Script Execution
-- **Process Pooling**: Reuse Python processes where possible
-- **Timeout Management**: Prevent hanging processes
-- **Error Isolation**: Script errors don't crash the server
-
-#### 3. API Response Optimization
+#### 1. File System Caching
 ```typescript
-// Consistent response format
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-}
-```
+// Cache directory structure
+const directoryCache = new Map<string, any>();
+const CACHE_TTL = 30000; // 30 seconds
 
-### Monitoring and Debugging
-
-#### 1. Console Logging
-- **Structured Logging**: Consistent log format
-- **Error Tracking**: Comprehensive error context
-- **Performance Metrics**: Request timing and execution stats
-
-#### 2. Development Tools
-- **React DevTools**: Component debugging
-- **TanStack Query DevTools**: Query state inspection
-- **Network Tab**: API request monitoring
-
-#### 3. Error Boundaries
-```typescript
-// Graceful error handling for component failures
-const ErrorBoundary = ({ children }) => {
-  // Error boundary implementation
+const getCachedDirectory = (path: string) => {
+  const cached = directoryCache.get(path);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+  return null;
 };
 ```
 
+#### 2. Response Compression
+```typescript
+import compression from 'compression';
+
+app.use(compression({
+  level: 6,
+  threshold: 1024,
+  filter: (req, res) => {
+    return compression.filter(req, res);
+  }
+}));
+```
+
+#### 3. Request Rate Limiting
+```typescript
+import rateLimit from 'express-rate-limit';
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP'
+});
+
+app.use('/api/', limiter);
+```
+
+### Database Optimizations
+
+#### 1. Query Optimization
+```typescript
+// Paginate large datasets
+const getValidationResults = async (page = 1, limit = 50) => {
+  const offset = (page - 1) * limit;
+  return results.slice(offset, offset + limit);
+};
+```
+
+#### 2. Index Strategy
+```sql
+-- If using actual database
+CREATE INDEX idx_test_case_id ON validation_results(test_case_id);
+CREATE INDEX idx_executed_at ON validation_results(executed_at);
+CREATE INDEX idx_status ON validation_results(status);
+```
+
 ---
 
-## Troubleshooting Common Issues
-
-### 1. Python Script Execution Failures
-- **Check Python Path**: Ensure Python 3 is available
-- **File Permissions**: Verify script execution permissions
-- **Dependencies**: Install required Python packages
-
-### 2. File Loading Issues
-- **Path Validation**: Check file path format
-- **Directory Structure**: Ensure directories exist
-- **File Permissions**: Verify read/write access
-
-### 3. Dashboard Data Issues
-- **CSV Format**: Validate CSV structure
-- **Date Parsing**: Check date format consistency
-- **Filter Logic**: Verify filter combinations
-
-### 4. Performance Issues
-- **Query Optimization**: Review TanStack Query settings
-- **Component Re-renders**: Check dependency arrays
-- **Memory Usage**: Monitor for memory leaks
-
----
-
-This comprehensive configuration guide covers all aspects of the Duke Energy Data Products Testing application. For specific implementation details, refer to the respective source files and documentation within the codebase.
+This comprehensive configuration guide provides detailed information for setting up, deploying, and troubleshooting the Duke Energy Data Products Testing application. The port configuration has been fixed to prevent conflicts between development and production modes, and extensive documentation covers all operational aspects.
