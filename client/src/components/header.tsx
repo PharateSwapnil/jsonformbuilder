@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTheme } from "./theme-provider";
-import { Sun, Moon, Database, BarChart3 } from "lucide-react";
+import { Sun, Moon, Database, BarChart3, StopCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface HeaderProps {
@@ -10,16 +11,29 @@ interface HeaderProps {
 export function Header({ onDashboardToggle }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const [showTimer, setShowTimer] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(3600); // 1 hour in seconds
+  const [timerDuration, setTimerDuration] = useState(60); // Default 60 minutes
+  const [timerId, setTimerId] = useState<NodeJS.Timeout | null>(null);
+  const [showTimerSettings, setShowTimerSettings] = useState(false);
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const startValidationTimer = () => {
     setShowTimer(true);
-    setTimeLeft(60);
+    const durationInSeconds = timerDuration * 60;
+    setTimeLeft(durationInSeconds);
+    setShowTimerSettings(false);
     
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
+          setTimerId(null);
           setShowTimer(false);
           // Show completion message
           setTimeout(() => {
@@ -30,6 +44,17 @@ export function Header({ onDashboardToggle }: HeaderProps) {
         return prev - 1;
       });
     }, 1000);
+    
+    setTimerId(timer);
+  };
+
+  const stopValidationTimer = () => {
+    if (timerId) {
+      clearInterval(timerId);
+      setTimerId(null);
+    }
+    setShowTimer(false);
+    setTimeLeft(0);
   };
 
   useEffect(() => {
@@ -37,10 +62,14 @@ export function Header({ onDashboardToggle }: HeaderProps) {
     const handleValidationStart = () => startValidationTimer();
     window.addEventListener('startValidation', handleValidationStart);
     
+    // Expose timer duration getter to global scope
+    (window as any).getTimerDuration = () => timerDuration;
+    
     return () => {
       window.removeEventListener('startValidation', handleValidationStart);
+      delete (window as any).getTimerDuration;
     };
-  }, []);
+  }, [timerDuration]);
 
   return (
     <header className="bg-background border-b border-border sticky top-0 z-50 shadow-sm">
@@ -57,6 +86,26 @@ export function Header({ onDashboardToggle }: HeaderProps) {
           </div>
           
           <div className="flex items-center space-x-4">
+            {/* Timer Settings */}
+            {!showTimer && (
+              <div className="flex items-center space-x-2">
+                <Select value={timerDuration.toString()} onValueChange={(value) => setTimerDuration(parseInt(value))}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 minute</SelectItem>
+                    <SelectItem value="5">5 minutes</SelectItem>
+                    <SelectItem value="10">10 minutes</SelectItem>
+                    <SelectItem value="15">15 minutes</SelectItem>
+                    <SelectItem value="30">30 minutes</SelectItem>
+                    <SelectItem value="45">45 minutes</SelectItem>
+                    <SelectItem value="60">1 hour</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Timer Display */}
             {showTimer && (
               <div className="flex items-center space-x-2 bg-amber-100 dark:bg-amber-900/30 px-3 py-1 rounded-full">
@@ -79,15 +128,24 @@ export function Header({ onDashboardToggle }: HeaderProps) {
                       stroke="#f59e0b"
                       strokeWidth="3"
                       strokeDasharray="100"
-                      strokeDashoffset={100 - (timeLeft / 60) * 100}
+                      strokeDashoffset={100 - (timeLeft / (timerDuration * 60)) * 100}
                       strokeLinecap="round"
                       className="transition-all duration-1000"
                     />
                   </svg>
                 </div>
                 <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
-                  Validating... {timeLeft}s
+                  Validating... {formatTime(timeLeft)}
                 </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={stopValidationTimer}
+                  className="flex items-center space-x-1 h-6 px-2"
+                >
+                  <StopCircle className="w-3 h-3" />
+                  <span className="text-xs">Stop</span>
+                </Button>
               </div>
             )}
             

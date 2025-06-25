@@ -27,6 +27,7 @@ interface ActionSidebarProps {
   onFormatJson: () => void;
   onCopyJson: () => void;
   onAddDatabase: () => void;
+  onSavedDatabases: () => void;
 }
 
 export function ActionSidebar({
@@ -40,27 +41,37 @@ export function ActionSidebar({
   onFormatJson,
   onCopyJson,
   onAddDatabase,
+  onSavedDatabases,
 }: ActionSidebarProps) {
   const { toast } = useToast();
 
   const handleValidateFeatures = async () => {
     try {
-      // Trigger validation timer
+      // Get the timer duration from header component
+      const timerDuration = (window as any).getTimerDuration ? (window as any).getTimerDuration() : 60;
+
+      // Dispatch custom event to start timer in header
       window.dispatchEvent(new Event('startValidation'));
-      
-      // Call API to start validation
-      await apiRequest("POST", "/api/validate-features");
-      
-      toast({
-        title: "Validation Started",
-        description: "Feature validation process has been initiated. Please wait 1 minute for completion.",
-      });
-      
-      onValidateFeatures();
+
+      const response = await apiRequest("POST", "/api/validate-features", { duration: timerDuration });
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Validation Started",
+          description: result.message || "Feature validation has been initiated",
+        });
+      } else {
+        toast({
+          title: "Validation Failed",
+          description: result.message || "Failed to start validation",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
-        title: "Validation Failed",
-        description: "Failed to start validation process",
+        title: "Validation Error",
+        description: "An error occurred while starting validation",
         variant: "destructive",
       });
     }
@@ -71,7 +82,7 @@ export function ActionSidebar({
       <CardHeader className="pb-4">
         <CardTitle className="text-lg">Actions</CardTitle>
       </CardHeader>
-      
+
       <CardContent className="flex-1 space-y-6 overflow-y-auto">
         {/* Primary Actions */}
         <div className="space-y-2">
@@ -83,7 +94,7 @@ export function ActionSidebar({
             <PlusCircle className="w-5 h-5" />
             <span className="font-medium">New Form</span>
           </Button>
-          
+
           <Button 
             variant="outline"
             onClick={onLoadTemplate}
@@ -110,7 +121,7 @@ export function ActionSidebar({
               <Upload className="w-4 h-4" />
               <span>Upload JSON</span>
             </Button>
-            
+
             <Button
               variant="ghost"
               onClick={onSaveJson}
@@ -120,7 +131,7 @@ export function ActionSidebar({
               <Save className="w-4 h-4" />
               <span>Save JSON</span>
             </Button>
-            
+
             <Button
               variant="ghost"
               onClick={onStateJson}
@@ -148,7 +159,7 @@ export function ActionSidebar({
               <CheckCircle className="w-4 h-4" />
               <span>Validate Features</span>
             </Button>
-            
+
             <Button
               variant="ghost"
               onClick={onExecutionState}
@@ -176,7 +187,7 @@ export function ActionSidebar({
               <Code className="w-4 h-4" />
               <span>Format JSON</span>
             </Button>
-            
+
             <Button
               variant="ghost"
               onClick={onCopyJson}
@@ -203,6 +214,15 @@ export function ActionSidebar({
             <Database className="w-4 h-4" />
             <span>Add Database</span>
           </Button>
+          <Button
+              onClick={onSavedDatabases}
+              className="w-full justify-start space-x-3 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+              variant="ghost"
+              title="View saved database connections"
+            >
+              <Database className="w-4 h-4" />
+              <span>Saved Databases</span>
+            </Button>
         </div>
       </CardContent>
     </Card>

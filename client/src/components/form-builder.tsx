@@ -32,10 +32,7 @@ const domainOptions = [
 // };
 
 const databaseOptions = [
-  "Test_&_Raw/GSDS",
-  "Production/GSDS",
-  "Test_&_Raw/ESDS",
-  "Production/ESDS",
+  "Test_&_Raw",
 ];
 
 export function FormBuilder({ data, onChange }: FormBuilderProps) {

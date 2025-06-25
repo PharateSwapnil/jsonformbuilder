@@ -15,8 +15,9 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { copyToClipboard, formatJson } from "@/lib/json-utils";
 import type { FormData } from "@/hooks/use-json-form";
-import type { JsonTestStructure } from "@shared/schema";
+import type { JsonTestStructure, Database } from "@shared/schema";
 import Editor from "@monaco-editor/react";
+import { Database as DatabaseIcon } from "lucide-react";
 
 const initialFormData: FormData = {
   test_case_id: "",
@@ -46,9 +47,11 @@ export default function JsonBuilder() {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [showDashboard, setShowDashboard] = useState(false);
   const [showAddDatabase, setShowAddDatabase] = useState(false);
+  const [showSavedDatabases, setShowSavedDatabases] = useState(false);
   const [showStateJson, setShowStateJson] = useState(false);
   const [showFileBrowser, setShowFileBrowser] = useState(false);
   const [stateJsonData, setStateJsonData] = useState<any>(null);
+  const [savedDatabases, setSavedDatabases] = useState<any[]>([]);
   const { toast } = useToast();
 
   const [newDatabase, setNewDatabase] = useState({
@@ -194,7 +197,7 @@ export default function JsonBuilder() {
         const timeDisplay = elapsedSeconds < 60 
           ? `${elapsedSeconds} sec` 
           : `${Math.floor(elapsedSeconds / 60)} min ${elapsedSeconds % 60} sec`;
-        
+
         if (processingToast) {
           processingToast.update({
             title: "File Processing",
@@ -206,7 +209,7 @@ export default function JsonBuilder() {
       // Execute lambda
       const lambdaResponse = await apiRequest("POST", "/api/execute-lambda");
       const lambdaResult = await lambdaResponse.json();
-      
+
       // Calculate actual execution time
       const endTime = Date.now();
       const actualDuration = Math.round((endTime - startTime) / 1000);
@@ -387,10 +390,39 @@ export default function JsonBuilder() {
         password: "",
         databaseType: "postgres",
       });
+      // Refresh saved databases list
+      loadSavedDatabases();
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to add database connection",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const loadSavedDatabases = async () => {
+    try {
+      const response = await apiRequest("GET", "/api/databases");
+      const data = await response.json();
+      setSavedDatabases(data);
+    } catch (error) {
+      console.error("Failed to load saved databases:", error);
+    }
+  };
+
+  const handleDeleteDatabase = async (id: number) => {
+    try {
+      await apiRequest("DELETE", `/api/databases/${id}`);
+      toast({
+        title: "Database Deleted",
+        description: "Database connection has been removed successfully",
+      });
+      loadSavedDatabases();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete database connection",
         variant: "destructive",
       });
     }
@@ -412,6 +444,10 @@ export default function JsonBuilder() {
           onFormatJson={handleFormatJson}
           onCopyJson={handleCopyJson}
           onAddDatabase={() => setShowAddDatabase(true)}
+          onSavedDatabases={() => {
+            loadSavedDatabases();
+            setShowSavedDatabases(true);
+          }}
         />
 
         <ResizablePanelGroup direction="horizontal" className="flex-1">
@@ -443,6 +479,60 @@ export default function JsonBuilder() {
         </DialogContent>
       </Dialog>
 
+      {/* Saved Databases Modal */}
+      <Dialog open={showSavedDatabases} onOpenChange={setShowSavedDatabases}>
+        <DialogContent className="max-w-4xl w-[90vw] max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Saved Database Connections</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            {savedDatabases.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <DatabaseIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                <p>No saved database connections found</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {savedDatabases.map((db) => (
+                  <div key={db.id} className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-lg">{db.connectionName}</h3>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteDatabase(db.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">Host:</span> {db.host}
+                      </div>
+                      <div>
+                        <span className="font-medium">Port:</span> {db.port}
+                      </div>
+                      <div>
+                        <span className="font-medium">Database:</span> {db.databaseName}
+                      </div>
+                      <div>
+                        <span className="font-medium">Type:</span> {db.databaseType}
+                      </div>
+                      <div>
+                        <span className="font-medium">Username:</span> {db.username}
+                      </div>
+                      <div>
+                        <span className="font-medium">Created:</span> {new Date(db.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Add Database Modal */}
       <Dialog open={showAddDatabase} onOpenChange={setShowAddDatabase}>
         <DialogContent className="max-w-2xl">
@@ -451,15 +541,6 @@ export default function JsonBuilder() {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-sm">
-              <p className="font-medium text-blue-800 dark:text-blue-200">Test Credentials:</p>
-              <p className="text-blue-700 dark:text-blue-300">Host: demo-postgres.example.com</p>
-              <p className="text-blue-700 dark:text-blue-300">Port: 5432</p>
-              <p className="text-blue-700 dark:text-blue-300">Database: duke_energy_test</p>
-              <p className="text-blue-700 dark:text-blue-300">Username: test_user</p>
-              <p className="text-blue-700 dark:text-blue-300">Password: test_pass_2024</p>
-            </div>
-
             <div>
               <Label htmlFor="connectionName">Connection Name</Label>
               <Input
@@ -477,7 +558,7 @@ export default function JsonBuilder() {
                   id="host"
                   value={newDatabase.host}
                   onChange={(e) => setNewDatabase({ ...newDatabase, host: e.target.value })}
-                  placeholder="demo-postgres.example.com"
+                  placeholder="Enter database host"
                 />
               </div>
               <div>
@@ -498,7 +579,7 @@ export default function JsonBuilder() {
                 id="databaseName"
                 value={newDatabase.databaseName}
                 onChange={(e) => setNewDatabase({ ...newDatabase, databaseName: e.target.value })}
-                placeholder="duke_energy_test"
+                placeholder="Enter database name"
               />
             </div>
 
@@ -509,7 +590,7 @@ export default function JsonBuilder() {
                   id="username"
                   value={newDatabase.username}
                   onChange={(e) => setNewDatabase({ ...newDatabase, username: e.target.value })}
-                  placeholder="test_user"
+                  placeholder="Enter username"
                 />
               </div>
               <div>
@@ -519,7 +600,7 @@ export default function JsonBuilder() {
                   type="password"
                   value={newDatabase.password}
                   onChange={(e) => setNewDatabase({ ...newDatabase, password: e.target.value })}
-                  placeholder="test_pass_2024"
+                  placeholder="Enter password"
                 />
               </div>
             </div>
@@ -606,7 +687,7 @@ export default function JsonBuilder() {
                     }
                   });
                   monaco.editor.setTheme('json-state-custom');
-                  
+
                   // Format JSON content
                   try {
                     const formatted = JSON.stringify(JSON.parse(formatJson(stateJsonData)), null, 2);

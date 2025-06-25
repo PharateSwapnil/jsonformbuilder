@@ -1,9 +1,16 @@
-import { 
-  users, testCases, databases, validationResults,
-  type User, type InsertUser, 
-  type TestCase, type InsertTestCase,
-  type Database, type InsertDatabase,
-  type ValidationResult, type InsertValidationResult
+import {
+  users,
+  testCases,
+  databases,
+  validationResults,
+  type User,
+  type InsertUser,
+  type TestCase,
+  type InsertTestCase,
+  type Database,
+  type InsertDatabase,
+  type ValidationResult,
+  type InsertValidationResult,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -11,27 +18,39 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   // Test case operations
   getTestCase(id: number): Promise<TestCase | undefined>;
   getTestCaseByTestId(testCaseId: string): Promise<TestCase | undefined>;
   createTestCase(testCase: InsertTestCase): Promise<TestCase>;
-  updateTestCase(id: number, testCase: Partial<InsertTestCase>): Promise<TestCase | undefined>;
+  updateTestCase(
+    id: number,
+    testCase: Partial<InsertTestCase>,
+  ): Promise<TestCase | undefined>;
   deleteTestCase(id: number): Promise<boolean>;
   getAllTestCases(): Promise<TestCase[]>;
-  
+
   // Database operations
   getDatabase(id: number): Promise<Database | undefined>;
-  getDatabaseByConnectionName(connectionName: string): Promise<Database | undefined>;
+  getDatabaseByConnectionName(
+    connectionName: string,
+  ): Promise<Database | undefined>;
   createDatabase(database: InsertDatabase): Promise<Database>;
-  updateDatabase(id: number, database: Partial<InsertDatabase>): Promise<Database | undefined>;
+  updateDatabase(
+    id: number,
+    database: Partial<InsertDatabase>,
+  ): Promise<Database | undefined>;
   deleteDatabase(id: number): Promise<boolean>;
   getAllDatabases(): Promise<Database[]>;
-  
+
   // Validation result operations
   getValidationResult(id: number): Promise<ValidationResult | undefined>;
-  createValidationResult(result: InsertValidationResult): Promise<ValidationResult>;
-  getValidationResultsByTestCase(testCaseId: string): Promise<ValidationResult[]>;
+  createValidationResult(
+    result: InsertValidationResult,
+  ): Promise<ValidationResult>;
+  getValidationResultsByTestCase(
+    testCaseId: string,
+  ): Promise<ValidationResult[]>;
   getAllValidationResults(): Promise<ValidationResult[]>;
 }
 
@@ -54,39 +73,42 @@ export class MemStorage implements IStorage {
     this.currentTestCaseId = 1;
     this.currentDatabaseId = 1;
     this.currentValidationId = 1;
-    
+
     // Initialize with some default databases
     this.initializeDefaultDatabases();
   }
 
   private initializeDefaultDatabases() {
-    const defaultDbs = [
-      {
-        connectionName: "Test_&_Raw/GSDS",
-        host: "localhost",
-        port: 5432,
-        databaseName: "gsds_test",
-        username: "admin",
-        password: "password",
-        databaseType: "postgres"
-      },
-      {
-        connectionName: "Production/GSDS",
-        host: "prod-server",
-        port: 5432,
-        databaseName: "gsds_prod",
-        username: "admin",
-        password: "password",
-        databaseType: "postgres"
-      }
-    ];
+    const defaultDbs = [];
+    
+    // Try to load from environment variables
+    const defaultConnectionName = process.env.DEFAULT_DB_CONNECTION_NAME || "Test_&_Raw";
+    const defaultHost = process.env.DEFAULT_DB_HOST || "localhost";
+    const defaultPort = parseInt(process.env.DEFAULT_DB_PORT || "5432");
+    const defaultDatabaseName = process.env.DEFAULT_DB_NAME || "gsds_test";
+    const defaultUsername = process.env.DEFAULT_DB_USERNAME || "admin";
+    const defaultPassword = process.env.DEFAULT_DB_PASSWORD || "password";
+    const defaultDatabaseType = process.env.DEFAULT_DB_TYPE || "postgres";
 
-    defaultDbs.forEach(db => {
+    // Only add default database if env vars are present or use fallback
+    if (process.env.DEFAULT_DB_HOST || !process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
+      defaultDbs.push({
+        connectionName: defaultConnectionName,
+        host: defaultHost,
+        port: defaultPort,
+        databaseName: defaultDatabaseName,
+        username: defaultUsername,
+        password: defaultPassword,
+        databaseType: defaultDatabaseType,
+      });
+    }
+
+    defaultDbs.forEach((db) => {
       const id = this.currentDatabaseId++;
       const database: Database = {
         ...db,
         id,
-        createdAt: new Date()
+        createdAt: new Date(),
       };
       this.databases.set(id, database);
     });
@@ -98,7 +120,9 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username,
+    );
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -114,7 +138,9 @@ export class MemStorage implements IStorage {
   }
 
   async getTestCaseByTestId(testCaseId: string): Promise<TestCase | undefined> {
-    return Array.from(this.testCases.values()).find(tc => tc.testCaseId === testCaseId);
+    return Array.from(this.testCases.values()).find(
+      (tc) => tc.testCaseId === testCaseId,
+    );
   }
 
   async createTestCase(insertTestCase: InsertTestCase): Promise<TestCase> {
@@ -124,20 +150,23 @@ export class MemStorage implements IStorage {
       ...insertTestCase,
       id,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     };
     this.testCases.set(id, testCase);
     return testCase;
   }
 
-  async updateTestCase(id: number, updates: Partial<InsertTestCase>): Promise<TestCase | undefined> {
+  async updateTestCase(
+    id: number,
+    updates: Partial<InsertTestCase>,
+  ): Promise<TestCase | undefined> {
     const existing = this.testCases.get(id);
     if (!existing) return undefined;
 
     const updated: TestCase = {
       ...existing,
       ...updates,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
     this.testCases.set(id, updated);
     return updated;
@@ -156,8 +185,12 @@ export class MemStorage implements IStorage {
     return this.databases.get(id);
   }
 
-  async getDatabaseByConnectionName(connectionName: string): Promise<Database | undefined> {
-    return Array.from(this.databases.values()).find(db => db.connectionName === connectionName);
+  async getDatabaseByConnectionName(
+    connectionName: string,
+  ): Promise<Database | undefined> {
+    return Array.from(this.databases.values()).find(
+      (db) => db.connectionName === connectionName,
+    );
   }
 
   async createDatabase(insertDatabase: InsertDatabase): Promise<Database> {
@@ -165,19 +198,22 @@ export class MemStorage implements IStorage {
     const database: Database = {
       ...insertDatabase,
       id,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
     this.databases.set(id, database);
     return database;
   }
 
-  async updateDatabase(id: number, updates: Partial<InsertDatabase>): Promise<Database | undefined> {
+  async updateDatabase(
+    id: number,
+    updates: Partial<InsertDatabase>,
+  ): Promise<Database | undefined> {
     const existing = this.databases.get(id);
     if (!existing) return undefined;
 
     const updated: Database = {
       ...existing,
-      ...updates
+      ...updates,
     };
     this.databases.set(id, updated);
     return updated;
@@ -196,19 +232,25 @@ export class MemStorage implements IStorage {
     return this.validationResults.get(id);
   }
 
-  async createValidationResult(insertResult: InsertValidationResult): Promise<ValidationResult> {
+  async createValidationResult(
+    insertResult: InsertValidationResult,
+  ): Promise<ValidationResult> {
     const id = this.currentValidationId++;
     const result: ValidationResult = {
       ...insertResult,
       id,
-      executedAt: new Date()
+      executedAt: new Date(),
     };
     this.validationResults.set(id, result);
     return result;
   }
 
-  async getValidationResultsByTestCase(testCaseId: string): Promise<ValidationResult[]> {
-    return Array.from(this.validationResults.values()).filter(vr => vr.testCaseId === testCaseId);
+  async getValidationResultsByTestCase(
+    testCaseId: string,
+  ): Promise<ValidationResult[]> {
+    return Array.from(this.validationResults.values()).filter(
+      (vr) => vr.testCaseId === testCaseId,
+    );
   }
 
   async getAllValidationResults(): Promise<ValidationResult[]> {

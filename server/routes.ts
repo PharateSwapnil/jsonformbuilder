@@ -92,42 +92,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/databases/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const database = await storage.getDatabase(id);
+      if (!database) {
+        return res.status(404).json({ message: "Database not found" });
+      }
+      res.json(database);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch database" });
+    }
+  });
+
+  app.delete("/api/databases/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteDatabase(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Database not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete database" });
+    }
+  });
+
   app.post("/api/databases/test-connection", async (req, res) => {
     try {
       const { host, port, databaseName, username, password, databaseType } = req.body;
       
-      // Test with predefined working credentials
-      const workingCredentials = {
-        host: "demo-postgres.example.com",
-        port: 5432,
-        databaseName: "duke_energy_test",
-        username: "test_user",
-        password: "test_pass_2024",
-        databaseType: "postgres"
-      };
-      
-      // Check if provided credentials match our working test credentials
-      const isValidConnection = 
-        host === workingCredentials.host &&
-        port === workingCredentials.port &&
-        databaseName === workingCredentials.databaseName &&
-        username === workingCredentials.username &&
-        password === workingCredentials.password &&
-        databaseType === workingCredentials.databaseType;
-      
       // Simulate connection test delay
       setTimeout(() => {
-        if (isValidConnection) {
+        // Basic validation
+        if (!host || !port || !databaseName || !username || !password || !databaseType) {
+          res.json({ 
+            success: false, 
+            message: "Connection failed - Missing required fields"
+          });
+          return;
+        }
+
+        // Simulate connection test (in real implementation, this would test actual connection)
+        const connectionSuccess = Math.random() > 0.3; // 70% success rate for demo
+        
+        if (connectionSuccess) {
           res.json({ 
             success: true, 
-            message: "Connection successful - Test database connected",
-            details: "Connected to Duke Energy test database successfully"
+            message: "Connection successful",
+            details: `Connected to ${databaseName} successfully`
           });
         } else {
           res.json({ 
             success: false, 
-            message: "Connection failed - Invalid credentials",
-            hint: "Use the test credentials: host=demo-postgres.example.com, port=5432, database=duke_energy_test, username=test_user, password=test_pass_2024"
+            message: "Connection failed - Unable to connect to database"
           });
         }
       }, 1500);
@@ -234,6 +252,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/validate-features", async (req, res) => {
     try {
+      const { duration } = req.body; // Duration in minutes from frontend
+      const durationMs = duration ? duration * 60 * 1000 : 3600000; // Convert to milliseconds, default 1 hour
+      
       // Start validation process
       setTimeout(async () => {
         try {
@@ -242,9 +263,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (error) {
           console.error("Validation failed:", error);
         }
-      }, 60000); // 1 minute delay
+      }, durationMs);
       
-      res.json({ success: true, message: "Validation started, will complete in 1 minute" });
+      const durationText = duration ? 
+        (duration < 60 ? `${duration} minute${duration > 1 ? 's' : ''}` : `${Math.floor(duration / 60)} hour${Math.floor(duration / 60) > 1 ? 's' : ''}`) :
+        "1 hour";
+      
+      res.json({ success: true, message: `Validation started, will complete in ${durationText}` });
     } catch (error) {
       res.status(500).json({ success: false, message: "Failed to start validation", error: error.message });
     }
@@ -370,7 +395,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ success: false, message: "Access denied" });
       }
 
-      const content = await fs.readFile(fullPath, "utf-8");
+      let content = await fs.readFile(fullPath, "utf-8");
+      
+      // Auto-format JSON files
+      if (fullPath.endsWith('.json')) {
+        try {
+          const jsonData = JSON.parse(content);
+          content = JSON.stringify(jsonData, null, 2);
+        } catch (error) {
+          // If parsing fails, return original content
+          console.log('Failed to parse JSON file for formatting:', error);
+        }
+      }
+      
       res.json({ success: true, content });
     } catch (error) {
       console.error("Error reading file:", error);
