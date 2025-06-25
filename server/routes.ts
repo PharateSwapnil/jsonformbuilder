@@ -168,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate filename based on test case ID
       const testCaseId = validatedJson.tests[0]?.test_case_id || `test_${Date.now()}`;
       const filename = `${testCaseId}.json`;
-      const filePath = path.join(process.cwd(), "test_config", filename);
+      const filePath = path.join(process.cwd(), "test_configs", filename);
       
       // Ensure directory exists
       await fs.mkdir(path.dirname(filePath), { recursive: true });
@@ -340,6 +340,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch {
         // Create directory if it doesn't exist
         await fs.mkdir(baseDir, { recursive: true });
+        // Create the standard folders
+        const standardFolders = ["create", "update", "delete", "create_validation", "update_validation", "delete_validation"];
+        for (const folder of standardFolders) {
+          await fs.mkdir(path.join(baseDir, folder), { recursive: true });
+        }
       }
       
       const files = await readDirectoryStructure(baseDir, "test_execution_state");
@@ -419,7 +424,7 @@ async function readDirectoryStructure(dirPath: string, relativePath: string): Pr
           path: relativeItemPath,
           children
         });
-      } else if (item.isFile() && (item.name.endsWith('.json') || item.name.endsWith('.csv'))) {
+      } else if (item.isFile()) {
         result.push({
           name: item.name,
           type: "file",

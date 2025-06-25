@@ -1,4 +1,16 @@
-print("hello world")
+# print("hello world")
+
+import time
+
+
+def long_running_task():
+  print("Starting a task that will take at least 5 seconds...")
+  time.sleep(5)  # Pause execution for 5 seconds
+  print("Task completed!")
+
+
+if __name__ == "__main__":
+  long_running_task()
 
 # #!/usr/bin/env python3
 # """

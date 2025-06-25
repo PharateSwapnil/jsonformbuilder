@@ -289,6 +289,7 @@ Location: JSON Builder → Action Sidebar
 API: POST /api/save
 Process: Save JSON to test_config/ directory
 Response: Success confirmation with file path
+Process: Save JSON to test_configs/ directory
 ```
 
 #### 3. Execute Lambda Button
@@ -500,7 +501,7 @@ const isValidPath = (filePath: string) => {
 
 #### Access Control
 - Read-only access to execution state files
-- Write access limited to test_config/ directory
+- Write access limited to test_configs/ directory
 - File type validation for uploads
 
 ---

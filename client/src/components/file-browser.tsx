@@ -209,23 +209,17 @@ export function FileBrowser({ open, onOpenChange }: FileBrowserProps) {
             )}
           </div>
         ) : (
-          <div className="flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded group transition-colors">
+          <div 
+            className="flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded group transition-colors cursor-pointer"
+            onClick={() => handleFileClick(node)}
+          >
             <div className="flex items-center space-x-2">
-              <File className="w-4 h-4 text-green-500" />
+              <FileText className="w-4 h-4 text-green-500" />
               <span className="text-sm text-gray-700 dark:text-gray-300">{node.name}</span>
               <span className="text-xs text-gray-400">
                 {node.name.endsWith('.json') ? 'JSON' : node.name.split('.').pop()?.toUpperCase()}
               </span>
             </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => previewFile(node.path)}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-              disabled={loading}
-            >
-              <Eye className="w-4 h-4" />
-            </Button>
           </div>
         )}
       </div>
@@ -298,45 +292,54 @@ export function FileBrowser({ open, onOpenChange }: FileBrowserProps) {
                           <div className="text-xs text-gray-500">Scanning directory</div>
                         </div>
                       </div>
-                    ) : filteredFiles.length > 0 ? (
-                      <div className="space-y-1">
-                        {filteredFiles.map((file, index) => (
-                          <div
-                            key={index}
-                            className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${
-                              selectedFile === file.path
-                                ? 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
-                                : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                            }`}
-                            onClick={() => handleFileClick(file)}
-                          >
-                            <FileText className="w-4 h-4 mr-2 text-green-600 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{file.name}</div>
-                              <div className="text-xs text-gray-500 truncate">{file.path}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
                     ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Folder className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                          {searchQuery ? 'No files match your search' : 'No execution state files found'}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {searchQuery ? 'Try adjusting your search query' : 'Files will appear here after running validations'}
-                        </p>
-                        {!searchQuery && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleRefresh}
-                            className="mt-3"
-                          >
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                            Refresh Directory
-                          </Button>
+                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                        <div className="text-xs text-gray-500 mb-2">
+                          {activeTab === "all" ? files.length : filteredFiles.length} {activeTab === "all" ? "items" : "files"} found
+                        </div>
+                        {(activeTab === "all" ? files.length > 0 : filteredFiles.length > 0) ? (
+                          <div className="space-y-1">
+                            {activeTab === "all" ? (
+                              renderFileTree(files)
+                            ) : (
+                              filteredFiles.map((file) => (
+                                <div 
+                                  key={file.path}
+                                  className="flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded group transition-colors cursor-pointer"
+                                  onClick={() => handleFileClick(file)}
+                                >
+                                  <div className="flex items-center space-x-2">
+                                    <FileText className="w-4 h-4 text-green-500" />
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">{file.name}</span>
+                                    <span className="text-xs text-gray-400">
+                                      {file.name.endsWith('.json') ? 'JSON' : file.name.split('.').pop()?.toUpperCase()}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Folder className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                              {searchQuery ? 'No files match your search' : 'No execution state files found'}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {searchQuery ? 'Try adjusting your search query' : 'Files will appear here after running validations'}
+                            </p>
+                            {!searchQuery && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRefresh}
+                                className="mt-3"
+                              >
+                                <RefreshCw className="w-4 h-4 mr-2" />
+                                Refresh Directory
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
@@ -428,7 +431,7 @@ export function FileBrowser({ open, onOpenChange }: FileBrowserProps) {
         </DialogContent>
       </Dialog>
 
-      
+
     </>
   );
 }

@@ -115,7 +115,7 @@ export function ActionSidebar({
               variant="ghost"
               onClick={onSaveJson}
               className="w-full justify-start space-x-3"
-              title="Save current JSON to test_config folder"
+              title="Save current JSON to test_configs folder"
             >
               <Save className="w-4 h-4" />
               <span>Save JSON</span>

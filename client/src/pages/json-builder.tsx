@@ -175,15 +175,66 @@ export default function JsonBuilder() {
   };
 
   const handleStateJson = async () => {
+    const startTime = Date.now();
+    let processingToast: any = null;
+    let timerInterval: NodeJS.Timeout | null = null;
+    let elapsedSeconds = 0;
+
     try {
-      // First execute lambda
+      // Show initial processing toast
+      processingToast = toast({
+        title: "File Processing",
+        description: "Please wait... file is processing 0 sec",
+        duration: Infinity, // Keep it open until we dismiss it
+      });
+
+      // Update toast every second with elapsed time
+      timerInterval = setInterval(() => {
+        elapsedSeconds++;
+        const timeDisplay = elapsedSeconds < 60 
+          ? `${elapsedSeconds} sec` 
+          : `${Math.floor(elapsedSeconds / 60)} min ${elapsedSeconds % 60} sec`;
+        
+        if (processingToast) {
+          processingToast.update({
+            title: "File Processing",
+            description: `Please wait... file is processing ${timeDisplay}`,
+          });
+        }
+      }, 1000);
+
+      // Execute lambda
       const lambdaResponse = await apiRequest("POST", "/api/execute-lambda");
       const lambdaResult = await lambdaResponse.json();
+      
+      // Calculate actual execution time
+      const endTime = Date.now();
+      const actualDuration = Math.round((endTime - startTime) / 1000);
+      const durationDisplay = actualDuration < 60 
+        ? `${actualDuration} sec` 
+        : `${Math.floor(actualDuration / 60)} min ${actualDuration % 60} sec`;
+
+      // Clear timer and dismiss processing toast
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      if (processingToast) {
+        processingToast.dismiss();
+        processingToast = null;
+      }
 
       if (lambdaResult.success) {
-        // Show success message and ask if user wants to see state JSON
+        // Show success message with execution time
+        toast({
+          title: "File Processed Successfully",
+          description: `File processed successfully in ${durationDisplay}`,
+          variant: "default",
+        });
+
+        // Ask if user wants to see state JSON
         const wantToSeeState = window.confirm(
-          "Script executed successfully! Do you want to see the state JSON?"
+          `Script executed successfully in ${durationDisplay}! Do you want to see the state JSON?`
         );
 
         if (wantToSeeState) {
@@ -222,15 +273,30 @@ export default function JsonBuilder() {
         }
       } else {
         toast({
-          title: "Script Failed",
-          description: "Failed to execute script",
+          title: "File Failed to Execute",
+          description: `File failed to execute after ${durationDisplay}. Error: ${lambdaResult.message || 'Unknown error'}`,
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Calculate execution time even on error
+      const endTime = Date.now();
+      const actualDuration = Math.round((endTime - startTime) / 1000);
+      const durationDisplay = actualDuration < 60 
+        ? `${actualDuration} sec` 
+        : `${Math.floor(actualDuration / 60)} min ${actualDuration % 60} sec`;
+
+      // Clear timer and dismiss processing toast
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
+      if (processingToast) {
+        processingToast.dismiss();
+      }
+
       toast({
-        title: "Execution Failed",
-        description: "Failed to execute lambda function",
+        title: "File Failed to Execute",
+        description: `File failed to execute after ${durationDisplay}. Error: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     }
