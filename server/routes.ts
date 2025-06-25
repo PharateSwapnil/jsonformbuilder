@@ -217,10 +217,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           test_case_id: "",
           test_case_description: "",
           action: "CREATE",
+          test_case_type: "electric",
           inputs: [
             {
               feature_sr_no: 1,
-              domain: "gas",
+              domain: "electric",
               feature: "",
               dependent_test_case: "",
               dependent_feature_sr_no: 0,
@@ -342,13 +343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error reading validation.csv:", error);
       // Return sample data if CSV doesn't exist using correct column names
       const sampleData = [
-        { test_case_id: "CON0002719-38889", domain: "gas", stage: "create", test_case_validation_status: "passed", executed_at: "2025-01-15T10:30:00Z", error_message: "" },
-        { test_case_id: "CON0002720-38890", domain: "land", stage: "update", test_case_validation_status: "failed", executed_at: "2025-01-15T11:15:00Z", error_message: "Database connection timeout" },
-        { test_case_id: "CON0002721-38891", domain: "electric", stage: "delete", test_case_validation_status: "passed", executed_at: "2025-01-15T12:00:00Z", error_message: "" },
-        { test_case_id: "CON0002722-38892", domain: "gas", stage: "create", test_case_validation_status: "passed", executed_at: "2025-01-10T13:30:00Z", error_message: "" },
-        { test_case_id: "CON0002723-38893", domain: "gas", stage: "update", test_case_validation_status: "passed", executed_at: "2025-06-10T14:15:00Z", error_message: "" },
-        { test_case_id: "CON0002724-38894", domain: "land", stage: "create", test_case_validation_status: "failed", executed_at: "2025-06-10T15:00:00Z", error_message: "Invalid SQL query syntax" },
-        { test_case_id: "CON0002725-38895", domain: "land", stage: "delete", test_case_validation_status: "passed", executed_at: "2025-06-10T16:30:00Z", error_message: "" },
+        { test_case_id: "", domain: "", stage: "", test_case_validation_status: "", executed_at: "", error_message: "" },
       ];
       res.json(sampleData);
     }
