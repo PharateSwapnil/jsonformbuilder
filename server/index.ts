@@ -64,7 +64,6 @@ app.use((req, res, next) => {
       ? 3000
       : 5000;
   
-  // Use 0.0.0.0 for external accessibility in Replit
   const host = "localhost";
   
   // Handle port conflicts gracefully

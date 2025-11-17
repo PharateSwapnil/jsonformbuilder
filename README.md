@@ -133,7 +133,7 @@ duke-energy-json-creator/
 │   ├── execution_lambda.py    # Individual test execution
 │   └── validation/
 │       └── process_validation.py  # Bulk validation processing
-├── test_config/            # Generated test configuration files
+├── test_configs/            # Generated test configuration files
 ├── test_execution_state/   # Test execution state files
 │   ├── create_validation/  # CREATE operation results
 │   ├── update_validation/  # UPDATE operation results

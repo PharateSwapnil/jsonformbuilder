@@ -131,9 +131,6 @@ venv.bak/
 
 # Generated test files
 test_execution_state/
-test_config/*.json
+test_configs/*.json
 validation.csv
 
-# Replit specific (keep these tracked)
-# .replit
-# replit.nix

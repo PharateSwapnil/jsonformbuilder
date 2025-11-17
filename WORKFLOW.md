@@ -55,7 +55,7 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                 FILE SYSTEM STORAGE                            │
 ├─────────────────┬─────────────────┬─────────────────────────────┤
-│  test_config/   │test_execution_  │     validation.csv          │
+│  test_configs/  │test_execution_  │     validation.csv          │
 │  - *.json       │state/           │  - Historical results       │
 │  - Test configs │- create_valid/  │  - Dashboard analytics      │
 │                 │- update_valid/  │                             │

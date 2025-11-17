@@ -39,7 +39,6 @@ const port = process.env.PORT ?
 ### Host Configuration
 - **Development**: `0.0.0.0:5000` (external access enabled)
 - **Production**: `0.0.0.0:3000` (or custom PORT)
-- **Replit**: Automatically forwards to external ports 80/443
 
 ---
 
@@ -47,7 +46,7 @@ const port = process.env.PORT ?
 
 ### Port Usage Matrix
 
-| Mode | Internal Port | External Port (Replit) | Host | Features |
+| Mode | Internal Port | External Port | Host | Features |
 |------|---------------|------------------------|------|----------|
 | Development | 5000 | 80/443 | 0.0.0.0 | HMR, Dev tools |
 | Production | 3000 | 80/443 | 0.0.0.0 | Static serving |
@@ -287,7 +286,6 @@ const handleGenerateJson = () => {
 ```typescript
 Location: JSON Builder → Action Sidebar
 API: POST /api/save
-Process: Save JSON to test_config/ directory
 Response: Success confirmation with file path
 Process: Save JSON to test_configs/ directory
 ```
@@ -345,7 +343,7 @@ Auto-refresh: Temporarily disabled during manual refresh
 
 #### File-Based Persistence
 ```
-test_config/                 # User configurations
+test_configs/                 # User configurations
 ├── CON0002719-55555.json   # Individual test cases
 ├── test5010.json
 └── ...
@@ -874,7 +872,7 @@ pip3 install -r requirements.txt  # if exists
 **Diagnosis**:
 ```bash
 # Check directory permissions
-ls -la test_config/
+ls -la test_configs/
 ls -la test_execution_state/
 
 # Verify disk space
@@ -884,10 +882,10 @@ df -h .
 **Solutions**:
 ```bash
 # Create missing directories
-mkdir -p test_config test_execution_state
+mkdir -p test_configs test_execution_state
 
 # Fix permissions
-chmod 755 test_config/
+chmod 755 test_configs/
 chmod 755 test_execution_state/
 
 # Check available space
